@@ -38,6 +38,7 @@ import preview
 import segmentation
 import merge
 import models
+import model_metadata
 
 DEFAULTS = {
     "strength": 0.75, "sampler": "Euler a", "clip_skip": 1, "eta": 1,
