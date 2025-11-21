@@ -365,3 +365,28 @@ def set_metadata_for_model(model_path: str, metadata: Dict, manager: ModelMetada
     if manager is None:
         manager = ModelMetadataManager()
     return manager.save_metadata(model_path, metadata)
+
+
+# Global manager instance
+_global_manager = None
+
+
+def get_manager(models_dir: str = None, metadata_dir: str = None) -> ModelMetadataManager:
+    """
+    Get or create global metadata manager instance
+    
+    This function provides a singleton-like interface for accessing the metadata manager
+    
+    Args:
+        models_dir: Optional models directory (used for initialization)
+        metadata_dir: Optional metadata directory (for compatibility)
+    
+    Returns:
+        ModelMetadataManager instance
+    """
+    global _global_manager
+    
+    if _global_manager is None:
+        _global_manager = ModelMetadataManager(models_root_dir=models_dir)
+    
+    return _global_manager
