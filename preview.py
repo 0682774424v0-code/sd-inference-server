@@ -7,17 +7,20 @@ import utils
 import safetensors.torch
 
 def relative_file(file):
-    """Get absolute path to a file relative to this module's directory."""
+    """Get absolute path to a file relative to this module"""
     base_dir = os.path.dirname(os.path.abspath(__file__))
     full_path = os.path.join(base_dir, file)
     
-    # Verify the file exists, provide helpful error message if not
-    if not os.path.exists(full_path):
-        import sys
-        print(f"Warning: File not found at {full_path}", file=sys.stderr)
-        print(f"Base directory: {base_dir}", file=sys.stderr)
-        print(f"Looking for: {file}", file=sys.stderr)
+    # If file exists at the computed path, return it
+    if os.path.exists(full_path):
+        return full_path
     
+    # Try current working directory as fallback
+    cwd_path = os.path.join(os.getcwd(), file)
+    if os.path.exists(cwd_path):
+        return cwd_path
+    
+    # Return original computation (for error reporting)
     return full_path
 
 class VAEApproxCheap(nn.Module):
@@ -65,14 +68,15 @@ APPROX_MODEL_PATH = os.path.join("approx", "VAE-approx.pt")
 
 def cheap_preview(latents, vae):
     if not CHEAP_MODEL.loaded:
-        try:
-            model_path = relative_file(CHEAP_MODEL_PATH)
-            CHEAP_MODEL.conv.load_state_dict(safetensors.torch.load_file(model_path))
-        except FileNotFoundError as e:
-            # Fallback: try to use model_preview instead if cheap model is missing
-            import sys
-            print(f"Warning: Could not load cheap preview model from {model_path}: {e}", file=sys.stderr)
-            return model_preview(latents, vae)
+        model_file = relative_file(CHEAP_MODEL_PATH)
+        if not os.path.exists(model_file):
+            raise FileNotFoundError(
+                f"VAE cheap model not found at: {model_file}\n"
+                f"Expected file: approx/VAE-cheap.safetensors\n"
+                f"Current working directory: {os.getcwd()}\n"
+                f"Module directory: {os.path.dirname(os.path.abspath(__file__))}"
+            )
+        CHEAP_MODEL.conv.load_state_dict(safetensors.torch.load_file(model_file))
     CHEAP_MODEL.to(latents.device).to(latents.dtype)
     outputs = CHEAP_MODEL(latents) / vae.scaling_factor
     if vae.model_type == "SDXL-Base":
@@ -83,14 +87,15 @@ def cheap_preview(latents, vae):
 
 def model_preview(latents, vae):
     if not APPROX_MODEL.loaded:
-        try:
-            model_path = relative_file(APPROX_MODEL_PATH)
-            APPROX_MODEL.load_state_dict(utils.load_pickle(model_path, map_location='cpu'))
-        except FileNotFoundError as e:
-            # Fallback: use full_preview instead if approx model is missing
-            import sys
-            print(f"Warning: Could not load approx preview model from {model_path}: {e}", file=sys.stderr)
-            return full_preview(latents, vae)
+        model_file = relative_file(APPROX_MODEL_PATH)
+        if not os.path.exists(model_file):
+            raise FileNotFoundError(
+                f"VAE approx model not found at: {model_file}\n"
+                f"Expected file: approx/VAE-approx.pt\n"
+                f"Current working directory: {os.getcwd()}\n"
+                f"Module directory: {os.path.dirname(os.path.abspath(__file__))}"
+            )
+        APPROX_MODEL.load_state_dict(utils.load_pickle(model_file, map_location='cpu'))
     APPROX_MODEL.to(latents.device).to(latents.dtype)
     outputs = APPROX_MODEL(latents)
     if vae.model_type == "SDXL-Base":
