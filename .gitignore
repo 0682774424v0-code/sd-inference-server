@@ -1,0 +1,9 @@
+*.st
+*.safetensors
+*.pt
+*.ckpt
+*.pth
+*.png
+*.log
+.vscode
+__pycache__
