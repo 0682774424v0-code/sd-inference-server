@@ -1,0 +1,10 @@
+{
+  "server_url": "http://localhost:5000",
+  "default_checkpoint": "sd15",
+  "default_width": 512,
+  "default_height": 512,
+  "default_steps": 20,
+  "default_scale": 7.5,
+  "timeout": 600,
+  "colab_server_url": "https://YOUR_NGROK_URL.ngrok.io"
+}
