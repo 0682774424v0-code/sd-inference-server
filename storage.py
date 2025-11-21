@@ -9,6 +9,7 @@ import models
 import convert
 import upscalers
 import annotator
+import model_metadata
 import controlnet
 import segmentation
 import utils
@@ -314,6 +315,17 @@ class ModelStorage():
         try:
             with safetensors.safe_open(file, framework="pt", device="cpu") as f:
                 metadata = f.metadata() or {}
+        except:
+            pass
+
+        # Add hash information from model_metadata if available
+        try:
+            mm = model_metadata.get_manager()
+            file_metadata = mm.load_metadata(file)
+            if file_metadata and "hash" in file_metadata:
+                metadata["hash"] = file_metadata["hash"]
+                if "hash_type" in file_metadata:
+                    metadata["hash_type"] = file_metadata["hash_type"]
         except:
             pass
 
