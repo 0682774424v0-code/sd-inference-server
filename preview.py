@@ -70,13 +70,15 @@ def cheap_preview(latents, vae):
     if not CHEAP_MODEL.loaded:
         model_file = relative_file(CHEAP_MODEL_PATH)
         if not os.path.exists(model_file):
-            raise FileNotFoundError(
-                f"VAE cheap model not found at: {model_file}\n"
-                f"Expected file: approx/VAE-cheap.safetensors\n"
-                f"Current working directory: {os.getcwd()}\n"
-                f"Module directory: {os.path.dirname(os.path.abspath(__file__))}"
-            )
-        CHEAP_MODEL.conv.load_state_dict(safetensors.torch.load_file(model_file))
+            # Fallback to full_preview if cheap model not available
+            print(f"Warning: VAE cheap model not found at {model_file}, using full preview instead")
+            return full_preview(latents, vae)
+        try:
+            CHEAP_MODEL.conv.load_state_dict(safetensors.torch.load_file(model_file))
+        except Exception as e:
+            print(f"Warning: Failed to load VAE cheap model: {e}, using full preview instead")
+            return full_preview(latents, vae)
+    
     CHEAP_MODEL.to(latents.device).to(latents.dtype)
     outputs = CHEAP_MODEL(latents) / vae.scaling_factor
     if vae.model_type == "SDXL-Base":
@@ -89,13 +91,15 @@ def model_preview(latents, vae):
     if not APPROX_MODEL.loaded:
         model_file = relative_file(APPROX_MODEL_PATH)
         if not os.path.exists(model_file):
-            raise FileNotFoundError(
-                f"VAE approx model not found at: {model_file}\n"
-                f"Expected file: approx/VAE-approx.pt\n"
-                f"Current working directory: {os.getcwd()}\n"
-                f"Module directory: {os.path.dirname(os.path.abspath(__file__))}"
-            )
-        APPROX_MODEL.load_state_dict(utils.load_pickle(model_file, map_location='cpu'))
+            # Fallback to full_preview if approx model not available
+            print(f"Warning: VAE approx model not found at {model_file}, using full preview instead")
+            return full_preview(latents, vae)
+        try:
+            APPROX_MODEL.load_state_dict(utils.load_pickle(model_file, map_location='cpu'))
+        except Exception as e:
+            print(f"Warning: Failed to load VAE approx model: {e}, using full preview instead")
+            return full_preview(latents, vae)
+    
     APPROX_MODEL.to(latents.device).to(latents.dtype)
     outputs = APPROX_MODEL(latents)
     if vae.model_type == "SDXL-Base":

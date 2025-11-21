@@ -418,7 +418,28 @@ def download(url, path, progress_callback=None, started_callback=None, headers={
                 if progress_callback:
                     progress_callback(bar.format_dict)
 
-    os.rename(filename+".tmp", filename)
+    # Безопасное переименование с проверкой
+    tmp_file = filename + ".tmp"
+    if not os.path.exists(tmp_file):
+        raise FileNotFoundError(f"Temporary file not found after download: {tmp_file}")
+    
+    # Если целевой файл уже существует, удалить его
+    if os.path.exists(filename):
+        try:
+            os.remove(filename)
+        except OSError as e:
+            raise RuntimeError(f"Failed to remove existing file {filename}: {e}")
+    
+    # Попытаться переименовать файл
+    try:
+        os.rename(tmp_file, filename)
+    except OSError as e:
+        # Если переименование не сработало, попробовать копирование
+        try:
+            import shutil
+            shutil.move(tmp_file, filename)
+        except Exception as move_error:
+            raise RuntimeError(f"Failed to finalize download: rename error: {e}, move error: {move_error}")
 
 class SafeUnpickler:
     ignored = []  
