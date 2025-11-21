@@ -38,7 +38,6 @@ import preview
 import segmentation
 import merge
 import models
-import model_metadata
 
 DEFAULTS = {
     "strength": 0.75, "sampler": "Euler a", "clip_skip": 1, "eta": 1,
@@ -603,9 +602,6 @@ class GenerationParameters():
     
     def get_metadata(self, mode, width, height, batch_size, prompts=None, seeds=None, subseeds=None):
         metadata = []
-        
-        # Get model metadata manager
-        metadata_manager = model_metadata.get_manager()
 
         for i in range(batch_size):
             m = {
@@ -643,25 +639,10 @@ class GenerationParameters():
             if mode in {"txt2img", "img2img"}:
                 if len({self.unet_name, self.clip_name, self.vae_name}) == 1:
                     m["model"] = model_name(self.unet_name)
-                    # Add model hash (AutoV2)
-                    unet_metadata = metadata_manager.get_metadata(self.unet_name, "UNET")
-                    if unet_metadata and unet_metadata.hash_autov2:
-                        m["model_hash"] = unet_metadata.hash_autov2
                 else:
                     m["UNET"] = model_name(self.unet_name)
                     m["CLIP"] = model_name(self.clip_name)
                     m["VAE"] = model_name(self.vae_name)
-                    # Add individual model hashes
-                    unet_metadata = metadata_manager.get_metadata(self.unet_name, "UNET")
-                    if unet_metadata and unet_metadata.hash_autov2:
-                        m["unet_hash"] = unet_metadata.hash_autov2
-                    clip_metadata = metadata_manager.get_metadata(self.clip_name, "CLIP")
-                    if clip_metadata and clip_metadata.hash_autov2:
-                        m["clip_hash"] = clip_metadata.hash_autov2
-                    vae_metadata = metadata_manager.get_metadata(self.vae_name, "VAE")
-                    if vae_metadata and vae_metadata.hash_autov2:
-                        m["vae_hash"] = vae_metadata.hash_autov2
-                        
                 m["prompt"] = ' AND '.join(prompts[i][0])
                 m["negative_prompt"] = ' AND '.join(prompts[i][1])
                 m["seed"] = seeds[i]
@@ -716,37 +697,6 @@ class GenerationParameters():
 
             if self.detailers:
                 m["detailers"] = [model_name(d) for d in self.detailers]
-                # Add detailer hashes
-                detailer_hashes = []
-                for detailer_name in self.detailers:
-                    detailer_meta = metadata_manager.get_metadata(detailer_name, "DETAILER")
-                    if detailer_meta and detailer_meta.hash_autov2:
-                        detailer_hashes.append(detailer_meta.hash_autov2)
-                if detailer_hashes:
-                    m["detailer_hashes"] = ", ".join(detailer_hashes)
-            
-            # Add LoRA hashes if present
-            if self.networks:
-                lora_hashes = []
-                for net in self.networks:
-                    # Extract LoRA name from network identifier
-                    if isinstance(net, str) and "lora" in net.lower():
-                        lora_name = net.split(":")[-1] if ":" in net else net
-                        lora_meta = metadata_manager.get_metadata(lora_name, "LORA")
-                        if lora_meta and lora_meta.hash_autov2:
-                            lora_hashes.append(f"{lora_name}: {lora_meta.hash_autov2}")
-                if lora_hashes:
-                    m["lora_hashes"] = ", ".join(lora_hashes)
-            
-            # Add ControlNet hashes if present
-            if self.cn:
-                cn_hashes = []
-                for cn_name in self.cn:
-                    cn_meta = metadata_manager.get_metadata(cn_name, "CONTROLNET")
-                    if cn_meta and cn_meta.hash_autov2:
-                        cn_hashes.append(cn_meta.hash_autov2)
-                if cn_hashes:
-                    m["controlnet_hash"] = ", ".join(cn_hashes)
 
             metadata += [m]
 
